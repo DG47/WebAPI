@@ -1,7 +1,9 @@
 -- If results may be shown in comparison mode (there are several records for the same covariate ID in report),
--- filter out only those covariates where all siblings are below threshold
+-- filter out only those covariates where all siblings are below threshold.
+-- Covariate IDs are only unique within a feature type: a criteria feature ID or a custom feature covariate ID
+-- can equal a preset covariate ID, so passed IDs are matched on type and fa_type as well.
 WITH threshold_passed_ids AS (
-  select covariate_id
+  select r.type, r.fa_type, r.covariate_id
   from @results_database_schema.cc_results r
   where r.cc_generation_id = @cohort_characterization_generation_id
   GROUP BY r.type, r.fa_type, covariate_id
@@ -35,7 +37,9 @@ select
        r.aggregate_name,
        r.missing_means_zero
 from @results_database_schema.cc_results r
-  JOIN threshold_passed_ids tpi ON tpi.covariate_id = r.covariate_id
+  JOIN threshold_passed_ids tpi ON tpi.type = r.type
+    AND tpi.fa_type = r.fa_type
+    AND tpi.covariate_id = r.covariate_id
   JOIN @vocabulary_schema.concept c on c.concept_id = r.concept_id
 where r.cc_generation_id = @cohort_characterization_generation_id
   and r.analysis_id in (@analysis_ids)
